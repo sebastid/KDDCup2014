@@ -13,7 +13,7 @@ sys.path.append('/Users/sebastiendurand/Documents/Kaggle/KDDCup2014/py')
 
 SEED = 42  # always use a seed for randomized procedures
 CSV_DIR = "/Users/sebastiendurand/Documents/Kaggle/KDDCup2014/csv/"
-VERSION = '1'
+
 
 def SaveResults(predictions, filename):
     """Given a vector of predictions, save results in CSV format."""
@@ -22,7 +22,7 @@ def SaveResults(predictions, filename):
         for i, pred in enumerate(predictions):
             f.write("%d,%f\n" % (i + 1, pred))
 
-def SaveResults2(df):
+def SaveResults2(df,VERSION):
     filename = '../csv/submission_%s_%s.csv' % (VERSION,datetime.date.today())
     df.to_csv(filename,sep=',',index=False)
     print "\nSaved %d rows file: %s" % (len(df),filename)
@@ -56,12 +56,15 @@ def train(x):
     model.fit(X_train, y=='t')
     return X_train,y,model
 
-def predict(x,m):
+def predict(x,models):
     X_test = np.matrix(x['essay'].apply(lambda e: len(e))).T
     
-    preds = m.predict_proba(X_test)[:,1]
-    print sum(preds)
-    labels = ['f','t']
+    preds_m = []
+    for i in range(len(models)):
+    	preds_m.append(models[i].predict_proba(X_test)[:,1])
+    
+	preds = np.mean(preds_m,axis=0)
+	print preds
     res = {"projectid": [], "is_exciting": []}
     for ix,row in x.iterrows():
         res["projectid"].append(row['projectid'])
@@ -90,15 +93,17 @@ def main():
 	print tot,nb
 	indices = {}
 	subspace_train_df = {}
+	models = {}
 	for i in range(1000):
-	    print "training model",i		
+		print "training model",i		
 		indices[i] = np.random.choice(np.arange(0,tot),nb,replace=False)
-		subspace_train_df[i] = train_df.iloc[indices]
-	    X,y,model = train(subspace_train_df)
+		subspace_train_df[i] = train_df.iloc[indices[i]]
+		X,y,models[i] = train(subspace_train_df[i])
 	
-	VERSION = '1'
-	preds = predict(test_df, model)
-	SaveResults2(preds) 
+	
+	preds = predict(test_df, models)
+	VERSION = '2'
+	SaveResults2(preds,VERSION) 
 	
 if __name__=="__main__":
 	main()
